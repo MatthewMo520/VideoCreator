@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Reel Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+        .file-upload-label:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .preview-area {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .preview-video {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .download-btn {
+            padding: 12px 24px;
+            background: #00d4aa;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .download-btn:hover {
+            background: #00b894;
+            transform: translateY(-2px);
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .trending-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .trending-info h3 {
+            margin-bottom: 15px;
+            color: #feca57;
+        }
+
+        .hashtags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .hashtag {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 AI Reel Generator</h1>
+            <p>Create viral reels instantly with AI-powered content generation</p>
+        </div>
+
+        <div class="main-content">
+            <div class="form-section">
+                <h2>Create Your Reel</h2>
+                
+                <form id="reelForm">
+                    <div class="form-group">
+                        <label for="prompt">Content Prompt *</label>
+                        <textarea id="prompt" name="prompt" placeholder="Describe what you want your reel to be about... (e.g., 'My top 3 stock picks that gained 500% this year')" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="style">Style</label>
+                        <select id="style" name="style">
+                            <option value="trendy">🔥 Trendy</option>
+                            <option value="business">💼 Business</option>
+                            <option value="lifestyle">✨ Lifestyle</option>
+                            <option value="tech">🚀 Tech</option>
+                            <option value="finance">📈 Finance</option>
+                            <option value="fitness">💪 Fitness</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="duration">Duration (seconds)</label>
+                        <input type="number" id="duration" name="duration" min="5" max="60" value="15">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="images">Upload Images (optional)</label>
+                        <div class="file-upload">
+                            <input type="file" id="images" name="images" multiple accept="image/*">
+                            <label for="images" class="file-upload-label">
+                                📸 Choose Images (JPG, PNG)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audio">Upload Audio (optional)</label>
+                        <div class="file-upload">
+                            <input type="file" id="audio" name="audio" accept="audio/*">
+                            <label for="audio" class="file-upload-label">
+                                🎵 Choose Audio File
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="includeTrending" name="includeTrending" checked>
+                            <label for="includeTrending">Include trending elements</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="generate-btn" id="generateBtn">
+                        Generate Reel
+                    </button>
+                </form>
+            </div>
+
+            <div class="preview-section">
+                <h2>Preview</h2>
+                
+                <div id="error" class="error"></div>
+                
+                <div class="preview-area" id="previewArea">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>Creating your viral reel...</p>
+                        <p><small>This may take 1-2 minutes</small></p>
+                    </div>
+                    
+                    <div id="placeholder" style="color: rgba(255,255,255,0.6);">
+                        <h3>🎥</h3>
+                        <p>Your generated reel will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="trending-info" id="trendingInfo">
+            <h3>🔥 Current Trending</h3>
+            <div id="trendingContent">
+                <p>Loading trending data...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL
+        const API_BASE = 'http://localhost:8000';
+
+        // DOM elements
+        const form = document.getElementById('reelForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const placeholder = document.getElementById('placeholder');
+        const previewArea = document.getElementById('previewArea');
+        const errorDiv = document.getElementById('error');
+        const trendingContent = document.getElementById('trendingContent');
+
+        // Load trending data on page load
+        loadTrendingData();
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+            loading.classList.add('active');
+            placeholder.style.display = 'none';
+            errorDiv.classList.remove('active');
+
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('prompt', document.getElementById('prompt').value);
+                formData.append('style', document.getElementById('style').value);
+                formData.append('duration', document.getElementById('duration').value);
+                formData.append('include_trending', document.getElementById('includeTrending').checked);
+
+                // Add images
+                const images = document.getElementById('images').files;
+                for (let i = 0; i < images.length; i++) {
+                    formData.append('images', images[i]);
+                }
+
+                // Add audio
+                const audio = document.getElementById('audio').files[0];
+                if (audio) {
+                    formData.append('audio', audio);
+                }
+
+                // Generate reel
+                const response = await fetch(`${API_BASE}/generate-reel`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show video preview
+                    showVideoPreview(result.download_url);
+                } else {
+                    throw new Error(result.message || 'Failed to generate reel');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to generate reel: ' + error.message);
+            } finally {
+                // Reset loading state
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Reel';
+                loading.classList.remove('active');
+            }
+        });
+
+        // Show video preview
+        function showVideoPreview(videoUrl) {
+            previewArea.innerHTML = `
+                <video class="preview-video" controls autoplay muted>
+                    <source src="${API_BASE}${videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <a href="${API_BASE}${videoUrl}" download class="download-btn">
+                    ⬇️ Download Reel
+                </a>
+            `;
+        }
+
+        // Show error message
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            placeholder.style.display = 'block';
+        }
+
+        // Load trending data
+        async function loadTrendingData() {
+            try {
+                const response = await fetch(`${API_BASE}/trends`);
+                const trends = await response.json();
+                
+                displayTrendingData(trends);
+            } catch (error) {
+                console.error('Error loading trends:', error);
+                trendingContent.innerHTML = '<p>Unable to load trending data</p>';
+            }
+        }
+
+        // Display trending data
+        function displayTrendingData(trends) {
+            const hashtags = trends.hashtags ? trends.hashtags.slice(0, 10) : [];
+            const topics = trends.topics ? trends.topics.slice(0, 5) : [];
+
+            let html = '';
+            
+            if (hashtags.length > 0) {
+                html += '<h4>Trending Hashtags:</h4>';
+                html += '<div class="hashtags">';
+                hashtags.forEach(tag => {
+                    html += `<span class="hashtag">#${tag}</span>`;
+                });
+                html += '</div>';
+            }
+
+            if (topics.length > 0) {
+                html += '<h4 style="margin-top: 15px;">Hot Topics:</h4>';
+                html += '<div class="hashtags">';
+                topics.forEach(topic => {
+                    html += `<span class="hashtag">${topic.replace(/_/g, ' ')}</span>`;
+                });
+                html += '</div>';
+            }
+
+            trendingContent.innerHTML = html || '<p>No trending data available</p>';
+        }
+
+        // File upload feedback
+        document.getElementById('images').addEventListener('change', function(e) {
+            const label = this.nextElementSibling;
+            const fileCount = e.target.files.length;
+            if (fileCount > 0) {
+                label.textContent = `📸 ${fileCount} image(s) selected`;
+            } else {
+                label.textContent = '📸 Choose Images (JPG, PNG)';
+            }
+        });
+
+        document.getElementById('audio').addEventListener('change', function(e) {
+            const label = this.nextElementSibling;
+            const file = e.target.files[0];
+            if (file) {
+                label.textContent = `🎵 ${file.name}`;
+            } else {
+                label.textContent = '🎵 Choose Audio File';
+            }
+        });
+
+        // Auto-resize textarea
+        document.getElementById('prompt').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    </script>
+</body>
+</html>
