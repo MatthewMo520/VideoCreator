@@ -38,8 +38,12 @@ class AIContentGenerator:
             # Step 2: Generate script based on research
             script = await self._generate_script(prompt, research_data, style, duration)
             
-            # Step 3: Generate voiceover audio
-            voiceover_path = await self._generate_voiceover(script, style)
+            # Step 3: Generate audio (voiceover or background music)
+            use_music_only = self._should_use_music_only(prompt, style)
+            if use_music_only:
+                voiceover_path = await self._generate_background_music(style, duration)
+            else:
+                voiceover_path = await self._generate_voiceover(script, style)
             
             # Step 4: Create visual content based on script
             visual_clips = await self._create_visual_content(script, style, duration)
@@ -126,34 +130,66 @@ class AIContentGenerator:
             }
         
         elif 'stock' in query.lower() or 'investment' in query.lower():
-            return {
-                'facts': [
-                    "S&P 500 gained 24.2% in 2024, outperforming expectations",
-                    "AI stocks led market growth with 300%+ average returns",
-                    "Tech sector represented 35% of total market cap"
-                ],
-                'statistics': [
-                    {"label": "NVIDIA Stock", "value": "+239%", "change": "YTD 2024"},
-                    {"label": "Market Volume", "value": "$45B", "change": "Daily average"}
-                ],
-                'key_points': ["AI revolution driving valuations", "Clean energy transition", "Remote work trends permanent"]
-            }
+            if 'best' in query.lower() or 'top' in query.lower() or 'pick' in query.lower():
+                return {
+                    'facts': [
+                        "1. NVIDIA (NVDA) - AI chip leader, 239% YTD growth",
+                        "2. Tesla (TSLA) - EV dominance, expanding into robotics",
+                        "3. Microsoft (MSFT) - Cloud computing + AI integration",
+                        "4. Apple (AAPL) - iPhone 15 cycle + Vision Pro launch"
+                    ],
+                    'statistics': [
+                        {"label": "NVIDIA", "value": "$890", "change": "+239% YTD"},
+                        {"label": "Tesla", "value": "$248", "change": "+67% growth"},
+                        {"label": "Microsoft", "value": "$378", "change": "AI revenue up 150%"}
+                    ],
+                    'key_points': ["AI revolution drives tech stocks", "EV adoption accelerating", "Cloud computing essential"]
+                }
+            else:
+                return {
+                    'facts': [
+                        "S&P 500 gained 24.2% in 2024, outperforming expectations",
+                        "AI stocks led market growth with 300%+ average returns",
+                        "Tech sector represented 35% of total market cap"
+                    ],
+                    'statistics': [
+                        {"label": "NVIDIA Stock", "value": "+239%", "change": "YTD 2024"},
+                        {"label": "Market Volume", "value": "$45B", "change": "Daily average"}
+                    ],
+                    'key_points': ["AI revolution driving valuations", "Clean energy transition", "Remote work trends permanent"]
+                }
         
         elif 'fitness' in query.lower() or 'workout' in query.lower() or 'health' in query.lower():
-            return {
-                'facts': [
-                    "Regular exercise reduces risk of heart disease by 35%",
-                    "Strength training increases metabolism for up to 48 hours post-workout",
-                    "Just 150 minutes weekly exercise adds 3.4 years to lifespan",
-                    "High-intensity workouts improve brain function and memory"
-                ],
-                'statistics': [
-                    {"label": "Metabolism Boost", "value": "15%", "change": "After strength training"},
-                    {"label": "Heart Disease Risk", "value": "-35%", "change": "With regular exercise"},
-                    {"label": "Life Extension", "value": "+3.4 years", "change": "From 150min/week"}
-                ],
-                'key_points': ["Consistency beats intensity", "Compound movements are king", "Recovery is crucial for growth"]
-            }
+            if 'plan' in query.lower() or 'routine' in query.lower():
+                return {
+                    'facts': [
+                        "Week 1-2: Foundation Phase - 3 workouts per week",
+                        "Week 3-4: Strength Phase - Add weight training",
+                        "Week 5-6: Endurance Phase - Increase cardio duration",
+                        "Week 7-8: Power Phase - High intensity intervals"
+                    ],
+                    'statistics': [
+                        {"label": "Day 1", "value": "Upper Body", "change": "Push-ups, Pull-ups"},
+                        {"label": "Day 2", "value": "Lower Body", "change": "Squats, Lunges"},
+                        {"label": "Day 3", "value": "Cardio", "change": "30min HIIT"}
+                    ],
+                    'key_points': ["Start with bodyweight exercises", "Progress gradually each week", "Rest days are mandatory"]
+                }
+            else:
+                return {
+                    'facts': [
+                        "Regular exercise reduces risk of heart disease by 35%",
+                        "Strength training increases metabolism for up to 48 hours post-workout",
+                        "Just 150 minutes weekly exercise adds 3.4 years to lifespan",
+                        "High-intensity workouts improve brain function and memory"
+                    ],
+                    'statistics': [
+                        {"label": "Metabolism Boost", "value": "15%", "change": "After strength training"},
+                        {"label": "Heart Disease Risk", "value": "-35%", "change": "With regular exercise"},
+                        {"label": "Life Extension", "value": "+3.4 years", "change": "From 150min/week"}
+                    ],
+                    'key_points': ["Consistency beats intensity", "Compound movements are king", "Recovery is crucial for growth"]
+                }
         
         elif 'tech' in query.lower() or 'ai' in query.lower() or 'technology' in query.lower():
             return {
@@ -267,17 +303,10 @@ class AIContentGenerator:
         stats = research_data.get('statistics', [])
         points = research_data.get('key_points', [])
         
-        # Generate hook (first 3 seconds)
-        hook = self._generate_hook(prompt, style)
-        script['segments'].append({
-            'type': 'hook',
-            'text': hook,
-            'duration': 3,
-            'visual': 'attention_grabber'
-        })
+        # Skip generic hook - go straight to content
         
         # Generate main content
-        remaining_time = duration - 3
+        remaining_time = duration
         if facts:
             fact_time = min(remaining_time * 0.6, len(facts) * 2)
             for i, fact in enumerate(facts[:3]):
@@ -301,6 +330,25 @@ class AIContentGenerator:
             })
         
         return script
+    
+    def _should_use_music_only(self, prompt: str, style: str) -> bool:
+        """Determine if we should use background music instead of voiceover"""
+        
+        # Use music for visual content like plans, lists, step-by-step guides
+        music_keywords = ['plan', 'routine', 'workout', 'exercise', 'steps', 'list', 'guide', 
+                         'top', 'best', 'picks', 'stocks', 'crypto', 'schedule', 'daily',
+                         'weekly', 'monthly', 'beginner', 'advanced']
+        
+        prompt_lower = prompt.lower()
+        for keyword in music_keywords:
+            if keyword in prompt_lower:
+                return True
+                
+        # Fitness and finance styles often work better with music
+        if style in ['fitness', 'finance']:
+            return True
+            
+        return False
     
     def _generate_hook(self, prompt: str, style: str) -> str:
         """Generate attention-grabbing opening"""
@@ -348,6 +396,120 @@ class AIContentGenerator:
             print(f"TTS failed: {e}")
             return None
     
+    async def _generate_background_music(self, style: str, duration: int) -> str:
+        """Generate background music based on style"""
+        import wave
+        
+        sample_rate = 44100
+        samples = int(duration * sample_rate)
+        
+        # Style-specific music characteristics
+        if style == 'fitness':
+            # High-energy workout music
+            audio = self._create_workout_beat(samples, sample_rate)
+        elif style == 'finance':
+            # Professional ambient music
+            audio = self._create_ambient_music(samples, sample_rate)
+        elif style == 'trendy':
+            # Upbeat electronic-style music
+            audio = self._create_electronic_beat(samples, sample_rate)
+        else:
+            # Default chill music
+            audio = self._create_chill_music(samples, sample_rate)
+        
+        # Save as temporary audio file
+        timestamp = int(time.time())
+        audio_path = f"{self.temp_dir}/music_{timestamp}.wav"
+        
+        # Convert to 16-bit PCM and save
+        audio_16bit = (audio * 32767).astype(np.int16)
+        
+        with wave.open(audio_path, 'w') as wav_file:
+            wav_file.setnchannels(1)  # Mono
+            wav_file.setsampwidth(2)  # 16-bit
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(audio_16bit.tobytes())
+        
+        print(f"Generated background music: {audio_path}")
+        return audio_path
+    
+    def _create_electronic_beat(self, samples: int, sample_rate: int) -> np.ndarray:
+        """Create upbeat electronic music"""
+        audio = np.zeros(samples)
+        
+        # Create kick drum pattern
+        kick_interval = sample_rate // 2  # 120 BPM
+        for i in range(0, samples, kick_interval):
+            if i + 1000 < samples:
+                kick_sound = np.sin(2 * np.pi * 60 * np.arange(1000) / sample_rate)
+                kick_sound *= np.exp(-np.arange(1000) / 300)
+                audio[i:i+1000] += kick_sound * 0.4
+        
+        # Add synth melody
+        melody_freqs = [440, 523, 659, 784]  # A, C, E, G
+        for i, freq in enumerate(melody_freqs):
+            start = i * samples // 4
+            end = (i + 1) * samples // 4
+            if end <= samples:
+                melody = np.sin(2 * np.pi * freq * np.arange(end - start) / sample_rate)
+                audio[start:end] += melody * 0.2
+        
+        return np.clip(audio, -1, 1)
+    
+    def _create_ambient_music(self, samples: int, sample_rate: int) -> np.ndarray:
+        """Create professional ambient music"""
+        audio = np.zeros(samples)
+        
+        # Create ambient pad with multiple harmonics
+        base_freq = 220  # A3
+        for harmonic in [1, 0.5, 0.25]:
+            freq = base_freq * harmonic
+            wave = np.sin(2 * np.pi * freq * np.arange(samples) / sample_rate)
+            # Add gentle modulation
+            modulation = 1 + 0.1 * np.sin(2 * np.pi * 0.3 * np.arange(samples) / sample_rate)
+            audio += wave * modulation * 0.15
+        
+        # Add gentle fade in/out
+        fade_samples = sample_rate
+        audio[:fade_samples] *= np.linspace(0, 1, fade_samples)
+        audio[-fade_samples:] *= np.linspace(1, 0, fade_samples)
+        
+        return np.clip(audio, -1, 1)
+    
+    def _create_workout_beat(self, samples: int, sample_rate: int) -> np.ndarray:
+        """Create high-energy workout music"""
+        audio = np.zeros(samples)
+        
+        # Strong kick pattern
+        kick_interval = sample_rate // 3  # 180 BPM - high energy
+        for i in range(0, samples, kick_interval):
+            if i + 800 < samples:
+                kick_sound = np.sin(2 * np.pi * 50 * np.arange(800) / sample_rate)
+                kick_sound *= np.exp(-np.arange(800) / 200)
+                audio[i:i+800] += kick_sound * 0.5
+        
+        # Add driving synth line
+        synth_freq = 440
+        synth_wave = np.sin(2 * np.pi * synth_freq * np.arange(samples) / sample_rate)
+        filter_sweep = np.linspace(0.2, 0.5, samples)
+        audio += synth_wave * filter_sweep * 0.3
+        
+        return np.clip(audio, -1, 1)
+    
+    def _create_chill_music(self, samples: int, sample_rate: int) -> np.ndarray:
+        """Create relaxed chill music"""
+        audio = np.zeros(samples)
+        
+        # Create soft chord progression
+        chord_freqs = [196, 294, 370, 440]  # G major chord
+        for i, freq in enumerate(chord_freqs):
+            wave = np.sin(2 * np.pi * freq * np.arange(samples) / sample_rate)
+            # Add harmonics for warmth
+            wave += 0.3 * np.sin(2 * np.pi * freq * 2 * np.arange(samples) / sample_rate)
+            audio += wave * (0.15 - i * 0.02)
+        
+        return np.clip(audio, -1, 1)
+    
     async def _create_visual_content(self, script: Dict, style: str, duration: int) -> List:
         """Create visual content based on script"""
         
@@ -360,14 +522,12 @@ class AIContentGenerator:
         for segment in script['segments']:
             segment_duration = segment['duration']
             
-            if segment['type'] == 'hook':
-                clip = self._create_hook_visual(segment['text'], colors, segment_duration)
-            elif segment['type'] == 'fact':
-                clip = self._create_fact_visual(segment['text'], segment.get('data'), colors, segment_duration)
+            if segment['type'] == 'fact':
+                clip = self._create_enhanced_visual(segment['text'], segment.get('data'), colors, segment_duration)
             elif segment['type'] == 'conclusion':
-                clip = self._create_conclusion_visual(segment['text'], colors, segment_duration)
+                clip = self._create_enhanced_visual(segment['text'], segment.get('data'), colors, segment_duration)
             else:
-                clip = self._create_default_visual(segment['text'], colors, segment_duration)
+                clip = self._create_enhanced_visual(segment['text'], segment.get('data'), colors, segment_duration)
             
             clips.append(clip)
             current_time += segment_duration
@@ -429,213 +589,243 @@ class AIContentGenerator:
         
         return mp.VideoClip(make_frame, duration=duration)
     
-    def _create_fact_visual(self, text: str, data: Dict, colors: tuple, duration: float) -> mp.VideoClip:
-        """Create animated fact card with data visualization"""
+    def _create_animated_fact_visual(self, text: str, data: Dict, colors: tuple, duration: float) -> mp.VideoClip:
+        """Create fact card with real visual animations"""
         
         def make_frame(t):
             width, height = 1080, 1920
             img = Image.new('RGB', (width, height), colors[0])
             draw = ImageDraw.Draw(img)
             
-            progress = t / duration
-            
-            # Simple animated gradient background
-            wave_offset = t * 50
-            for y in range(0, height, 2):  # Every 2nd line for performance
+            # Animated gradient with wave effects
+            for y in range(height):
                 ratio = y / height
-                wave_factor = 0.1 * np.sin((y + wave_offset) * 0.02)
-                ratio = max(0, min(1, ratio + wave_factor))
-                
+                wave = 0.1 * np.sin(t * 2 + y * 0.01)
+                ratio = max(0, min(1, ratio + wave))
                 r = int(colors[0][0] * (1-ratio) + colors[1][0] * ratio)
                 g = int(colors[0][1] * (1-ratio) + colors[1][1] * ratio)
                 b = int(colors[0][2] * (1-ratio) + colors[1][2] * ratio)
-                draw.rectangle([(0, y), (width, y+2)], fill=(r, g, b))
+                draw.line([(0, y), (width, y)], fill=(r, g, b))
             
-            # Add animated border/frame
-            border_pulse = int(10 + 5 * np.sin(t * 4))
-            border_color = (255, 255, 255, int(200 + 55 * np.sin(t * 3)))
-            draw.rectangle([border_pulse, border_pulse, width-border_pulse, height-border_pulse], 
-                          outline='white', width=3)
+            # Moving geometric shapes
+            num_shapes = 8
+            for i in range(num_shapes):
+                angle = (t * 50 + i * 45) % 360
+                radius = 200 + 50 * np.sin(t * 3 + i)
+                x = width // 2 + int(radius * np.cos(np.radians(angle)))
+                y = height // 2 + int(radius * np.sin(np.radians(angle)))
+                
+                if 0 <= x < width and 0 <= y < height:
+                    size = int(15 + 5 * np.sin(t * 4 + i))
+                    alpha = int(100 + 50 * np.sin(t * 2 + i))
+                    
+                    if i % 3 == 0:
+                        # Circles
+                        draw.ellipse([x-size, y-size, x+size, y+size], 
+                                   fill=(255, 255, 255, alpha))
+                    elif i % 3 == 1:
+                        # Squares
+                        draw.rectangle([x-size, y-size, x+size, y+size], 
+                                     fill=(255, 255, 0, alpha))
+                    else:
+                        # Triangles
+                        draw.polygon([(x, y-size), (x-size, y+size), (x+size, y+size)], 
+                                   fill=(0, 255, 255, alpha))
             
-            # Add fact text with animations
+            # Floating particles
+            particle_count = 20
+            for i in range(particle_count):
+                px = int((i * 137 + t * 100) % width)
+                py = int((i * 73 + t * 80) % height)
+                particle_size = int(3 + 2 * np.sin(t * 5 + i))
+                draw.ellipse([px-particle_size, py-particle_size, 
+                            px+particle_size, py+particle_size], fill='white')
+            
+            # Animated progress bars (visual interest)
+            bar_count = 5
+            for i in range(bar_count):
+                bar_y = 100 + i * 50
+                bar_progress = (t + i * 0.5) % 2  # 2-second cycle
+                bar_width = int(200 * min(1, bar_progress))
+                
+                # Background bar
+                draw.rectangle([width - 250, bar_y, width - 50, bar_y + 20], 
+                             fill=(50, 50, 50))
+                # Animated bar
+                draw.rectangle([width - 250, bar_y, width - 250 + bar_width, bar_y + 20], 
+                             fill=colors[1])
+            
             try:
-                title_font = ImageFont.truetype("arial.ttf", 60)
-                text_font = ImageFont.truetype("arial.ttf", 45)
-                stat_font = ImageFont.truetype("arial.ttf", 55)
+                title_font = ImageFont.truetype("arial.ttf", 50)
+                text_font = ImageFont.truetype("arial.ttf", 40)
             except:
                 title_font = ImageFont.load_default()
                 text_font = ImageFont.load_default()
-                stat_font = ImageFont.load_default()
             
-            # Animated title with slide-in effect
-            title_slide = min(1.0, t * 3)  # Slide in quickly
-            title_x = int(-200 + (250 * title_slide))  # Slide from left
-            title_scale = 1.0 + 0.1 * np.sin(t * 5)  # Subtle pulse
+            # Animated title with pulse
+            title_scale = 1 + 0.1 * np.sin(t * 6)
+            title_bounce = int(10 * np.sin(t * 4))
+            draw.text((50, 200 + title_bounce), "KEY INSIGHT", font=title_font, fill='yellow')
             
-            # Title with glow effect
-            title_text = "KEY INSIGHT"
-            for offset in [(4, 4), (2, 2), (0, 0)]:
-                color = 'black' if offset != (0, 0) else 'yellow'
-                draw.text((title_x + offset[0], 200 + offset[1]), title_text, font=title_font, fill=color)
-            
-            # Fact text with word-by-word reveal
+            # Fact text with typewriter effect
             words = text.split()
             lines = []
             current_line = []
             for word in words:
                 current_line.append(word)
-                if len(' '.join(current_line)) > 20:  # Shorter lines for bigger text
+                if len(' '.join(current_line)) > 25:
                     lines.append(' '.join(current_line[:-1]))
                     current_line = [word]
             if current_line:
                 lines.append(' '.join(current_line))
             
             # Progressive text reveal
-            text_reveal_progress = min(1.0, (t - 0.5) * 2)  # Start after title
-            total_words = len(' '.join(lines).split())
-            words_to_show = int(total_words * text_reveal_progress)
+            chars_revealed = int(len(text) * min(1, t / 2))
+            revealed_text = text[:chars_revealed]
             
-            all_words = ' '.join(lines).split()
-            revealed_words = all_words[:words_to_show]
-            
-            # Rebuild lines with revealed words
+            # Rebuild lines with revealed text
+            revealed_words = revealed_text.split()
             revealed_lines = []
             current_line = []
             for word in revealed_words:
                 current_line.append(word)
-                if len(' '.join(current_line)) > 20:
+                if len(' '.join(current_line)) > 25:
                     revealed_lines.append(' '.join(current_line[:-1]))
                     current_line = [word]
             if current_line:
                 revealed_lines.append(' '.join(current_line))
             
-            y_pos = 320
-            for i, line in enumerate(revealed_lines[:4]):  # Max 4 lines
-                if not line.strip():
-                    continue
-                    
-                # Add bounce effect to each line
-                bounce = int(5 * np.sin(t * 4 + i * 0.8))
-                
-                # Text with shadow for depth
-                for shadow_offset in [(3, 3), (1, 1), (0, 0)]:
-                    color = 'black' if shadow_offset != (0, 0) else 'white'
-                    draw.text((60 + shadow_offset[0], y_pos + bounce + shadow_offset[1]), 
-                             line, font=text_font, fill=color)
-                
-                y_pos += 65
+            y_pos = 300
+            for line in revealed_lines[:4]:
+                line_bounce = int(5 * np.sin(t * 3 + y_pos * 0.01))
+                draw.text((50, y_pos + line_bounce), line, font=text_font, fill='white')
+                y_pos += 50
             
             # Animated data visualization
-            if data and progress > 0.3:  # Data appears after text
-                data_progress = min(1.0, (t - 1.0) * 2)  # Delayed appearance
+            if data:
+                data_y = y_pos + 100
                 
-                # Create animated chart/bar for statistics
-                chart_y = y_pos + 80
-                chart_width = 400
-                chart_height = 60
+                # Animated chart
+                chart_progress = min(1, (t - 1) / 2)  # Start after 1 second
+                chart_width = int(300 * chart_progress)
                 
-                # Background bar
-                draw.rectangle([60, chart_y, 60 + chart_width, chart_y + chart_height], 
-                              fill=(50, 50, 50), outline='white', width=2)
+                # Chart background
+                draw.rectangle([50, data_y + 50, 350, data_y + 100], fill=(30, 30, 30))
+                # Animated chart fill
+                draw.rectangle([50, data_y + 50, 50 + chart_width, data_y + 100], fill='lime')
                 
-                # Animated progress bar based on data value
-                if data.get('value'):
-                    # Extract percentage if available
-                    value_str = str(data['value'])
-                    percentage = 0.7  # Default
-                    if '%' in value_str:
-                        try:
-                            percentage = abs(float(value_str.replace('%', '').replace('+', '').replace(',', ''))) / 100
-                            percentage = min(1.0, percentage)
-                        except:
-                            percentage = 0.7
-                    
-                    # Animated fill
-                    fill_width = int(chart_width * percentage * data_progress)
-                    bar_color = 'lime' if '+' in value_str or percentage > 0 else 'red'
-                    
-                    draw.rectangle([60, chart_y, 60 + fill_width, chart_y + chart_height], 
-                                  fill=bar_color)
+                # Data text with glow
+                data_text = f"{data['label']}: {data['value']}"
+                draw.text((52, data_y + 2), data_text, font=title_font, fill='black')  # Shadow
+                draw.text((50, data_y), data_text, font=title_font, fill='lime')
                 
-                # Data label with typewriter effect
-                label_text = f"{data['label']}: {data['value']}"
-                chars_to_show = int(len(label_text) * data_progress)
-                visible_label = label_text[:chars_to_show]
-                
-                # Glowing text effect for data
-                for glow in [(6, 6), (3, 3), (0, 0)]:
-                    glow_color = 'black' if glow != (0, 0) else 'lime'
-                    draw.text((60 + glow[0], chart_y - 50 + glow[1]), 
-                             visible_label, font=stat_font, fill=glow_color)
-                
-                # Change indicator with pulsing effect
-                if 'change' in data and data_progress > 0.5:
-                    change_pulse = 1.0 + 0.2 * np.sin(t * 6)
-                    change_text = f"Change: {data['change']}"
-                    change_color = 'lime' if '+' in data['change'] else 'orange'
-                    
-                    draw.text((60, chart_y + chart_height + 20), 
-                             change_text, font=text_font, fill=change_color)
-            
-            # Simplified floating icons for performance
-            if progress > 0.7:
-                icon_count = 4  # Reduced from 8
-                for i in range(icon_count):
-                    icon_x = int(width - 80 + 20 * np.sin(t * 2 + i))
-                    icon_y = int(300 + i * 300)
-                    icon_size = 10  # Fixed size
-                    
-                    # Simple circles only for performance
-                    draw.ellipse([icon_x - icon_size, icon_y - icon_size,
-                                icon_x + icon_size, icon_y + icon_size],
-                               fill='white')
+                if 'change' in data:
+                    change_pulse = 1 + 0.2 * np.sin(t * 8)
+                    change_color = 'lime' if '+' in data['change'] else 'red'
+                    draw.text((50, data_y + 160), f"Change: {data['change']}", 
+                             font=text_font, fill=change_color)
             
             return np.array(img)
         
         return mp.VideoClip(make_frame, duration=duration)
     
-    def _create_conclusion_visual(self, text: str, colors: tuple, duration: float) -> mp.VideoClip:
-        """Create animated conclusion/CTA visual"""
+    def _create_animated_conclusion_visual(self, text: str, colors: tuple, duration: float) -> mp.VideoClip:
+        """Create conclusion visual with spectacular animations"""
         
         def make_frame(t):
             width, height = 1080, 1920
             img = Image.new('RGB', (width, height), colors[1])
             draw = ImageDraw.Draw(img)
             
-            progress = t / duration
-            
             # Animated spiral background
             center_x, center_y = width // 2, height // 2
-            for radius in range(20, min(width, height) // 2, 40):
-                spiral_progress = (t * 2 + radius * 0.01) % (2 * np.pi)
-                spiral_x = center_x + int(radius * np.cos(spiral_progress))
-                spiral_y = center_y + int(radius * np.sin(spiral_progress))
-                
-                # Fade effect for distant spirals
-                alpha = max(0, 255 - radius // 3)
-                spiral_size = max(1, int(10 - radius // 50))
-                
-                draw.ellipse([spiral_x - spiral_size, spiral_y - spiral_size,
-                            spiral_x + spiral_size, spiral_y + spiral_size],
-                           fill=colors[0])
+            for spiral in range(3):
+                for angle_step in range(0, 360, 15):
+                    angle = angle_step + t * 100 + spiral * 120
+                    radius = 100 + spiral * 80 + 30 * np.sin(t * 2 + spiral)
+                    x = center_x + int(radius * np.cos(np.radians(angle)))
+                    y = center_y + int(radius * np.sin(np.radians(angle)))
+                    
+                    if 0 <= x < width and 0 <= y < height:
+                        size = int(8 + 4 * np.sin(t * 3 + angle_step))
+                        alpha = int(150 + 50 * np.sin(t + spiral))
+                        draw.ellipse([x-size, y-size, x+size, y+size], 
+                                   fill=colors[0])
             
-            # Pulsating border with multiple layers
-            for layer in range(3):
-                border_pulse = int(15 + layer * 5 + 10 * np.sin(t * 4 + layer))
+            # Animated radiating lines
+            line_count = 12
+            for i in range(line_count):
+                angle = i * 30 + t * 50
+                length = 200 + 50 * np.sin(t * 2 + i)
+                
+                x1 = center_x + int(50 * np.cos(np.radians(angle)))
+                y1 = center_y + int(50 * np.sin(np.radians(angle)))
+                x2 = center_x + int(length * np.cos(np.radians(angle)))
+                y2 = center_y + int(length * np.sin(np.radians(angle)))
+                
+                width_val = int(3 + 2 * np.sin(t * 4 + i))
+                draw.line([(x1, y1), (x2, y2)], fill='white', width=width_val)
+            
+            # Pulsating border with layers
+            for layer in range(4):
+                border_pulse = int(15 + layer * 8 + 15 * np.sin(t * 4 + layer))
                 border_alpha = int(100 + 50 * np.sin(t * 3 + layer))
                 border_color = colors[0] if layer % 2 == 0 else 'white'
                 
                 draw.rectangle([border_pulse, border_pulse, width-border_pulse, height-border_pulse], 
-                              outline=border_color, width=2 + layer)
+                              outline=border_color, width=3 + layer)
+            
+            # Floating icons/symbols
+            icon_count = 15
+            for i in range(icon_count):
+                icon_angle = (t * 80 + i * 24) % 360
+                icon_radius = 300 + 100 * np.sin(t * 1.5 + i)
+                icon_x = center_x + int(icon_radius * np.cos(np.radians(icon_angle)))
+                icon_y = center_y + int(icon_radius * np.sin(np.radians(icon_angle)))
+                
+                if 0 <= icon_x < width and 0 <= icon_y < height:
+                    icon_size = int(12 + 6 * np.sin(t * 5 + i))
+                    
+                    if i % 4 == 0:
+                        # Hearts
+                        draw.ellipse([icon_x-icon_size//2, icon_y-icon_size//2, 
+                                    icon_x+icon_size//2, icon_y], fill='red')
+                        draw.ellipse([icon_x, icon_y-icon_size//2, 
+                                    icon_x+icon_size, icon_y], fill='red')
+                        draw.polygon([(icon_x+icon_size//4, icon_y), 
+                                    (icon_x-icon_size//2, icon_y+icon_size), 
+                                    (icon_x+icon_size, icon_y+icon_size)], fill='red')
+                    elif i % 4 == 1:
+                        # Stars
+                        points = []
+                        for p in range(10):
+                            a = p * 36
+                            r = icon_size if p % 2 == 0 else icon_size // 2
+                            px = icon_x + int(r * np.cos(np.radians(a)))
+                            py = icon_y + int(r * np.sin(np.radians(a)))
+                            points.append((px, py))
+                        draw.polygon(points, fill='yellow')
+                    elif i % 4 == 2:
+                        # Thumbs up (simplified)
+                        draw.rectangle([icon_x-icon_size//3, icon_y, 
+                                      icon_x+icon_size//3, icon_y+icon_size], fill='lime')
+                        draw.ellipse([icon_x-icon_size//2, icon_y-icon_size//2, 
+                                    icon_x+icon_size//2, icon_y+icon_size//2], fill='lime')
+                    else:
+                        # Lightning bolt
+                        draw.polygon([(icon_x, icon_y-icon_size), 
+                                    (icon_x+icon_size//2, icon_y), 
+                                    (icon_x-icon_size//4, icon_y), 
+                                    (icon_x, icon_y+icon_size)], fill='cyan')
             
             try:
-                font = ImageFont.truetype("arial.ttf", 50)
-                cta_font = ImageFont.truetype("arial.ttf", 70)
+                font = ImageFont.truetype("arial.ttf", 45)
+                cta_font = ImageFont.truetype("arial.ttf", 65)
             except:
                 font = ImageFont.load_default()
                 cta_font = ImageFont.load_default()
             
-            # Wrap and center text with bounce animations
+            # Animated text with effects
             words = text.split()
             lines = []
             current_line = []
@@ -647,99 +837,199 @@ class AIContentGenerator:
             if current_line:
                 lines.append(' '.join(current_line))
             
-            # Text with cascading reveal effect
-            text_progress = min(1.0, progress * 2)
-            lines_to_show = int(len(lines) * text_progress)
-            
-            y_start = height // 2 - (len(lines) * 40)
-            for i, line in enumerate(lines[:lines_to_show + 1]):
-                if i > lines_to_show:
-                    break
-                    
-                # Bounce effect with different phases for each line
-                bounce = int(15 * np.sin(t * 5 + i * 1.2))
-                
-                # Slide in from different directions
-                slide_progress = min(1.0, (progress - i * 0.1) * 3)
-                if slide_progress <= 0:
-                    continue
-                    
-                slide_x = int(width * (1 - slide_progress) * (1 if i % 2 == 0 else -1))
+            y_start = height // 2 - (len(lines) * 35)
+            for i, line in enumerate(lines):
+                # Wave effect for each line
+                wave_offset = int(20 * np.sin(t * 4 + i * 0.8))
                 
                 bbox = draw.textbbox((0, 0), line, font=font)
-                text_width = max(1, bbox[2] - bbox[0])
-                x = max(0, (width - text_width) // 2 + slide_x)
-                y = y_start + bounce
+                text_width = bbox[2] - bbox[0]
+                x = max(10, (width - text_width) // 2)
                 
-                # Multi-shadow effect for depth
-                for shadow in [(6, 6), (3, 3), (0, 0)]:
-                    shadow_color = 'black' if shadow != (0, 0) else 'white'
-                    draw.text((x + shadow[0], y + shadow[1]), line, font=font, fill=shadow_color)
+                # Simple shadow for text
+                draw.text((x + 2, y_start + wave_offset + 2), line, font=font, fill='black')
+                draw.text((x, y_start + wave_offset), line, font=font, fill='white')
                 
                 y_start += 70
             
-            # Spectacular CTA with rainbow and pulse effects
-            if progress > 0.6:  # CTA appears later for impact
-                cta_progress = (progress - 0.6) / 0.4  # 0 to 1 for CTA animation
-                
-                cta = "LIKE & FOLLOW FOR MORE!"
-                
-                # Rainbow color cycle for CTA
-                hue_shift = (t * 200) % 360
-                r = int(255 * (1 + np.sin(np.radians(hue_shift))) / 2)
-                g = int(255 * (1 + np.sin(np.radians(hue_shift + 120))) / 2)
-                b = int(255 * (1 + np.sin(np.radians(hue_shift + 240))) / 2)
-                rainbow_color = (r, g, b)
-                
-                # Scale pulsing effect
-                cta_scale = 1.0 + 0.3 * np.sin(t * 6) * cta_progress
-                
-                # Position with slight bounce
-                cta_bounce = int(20 * np.sin(t * 4))
-                bbox = draw.textbbox((0, 0), cta, font=cta_font)
-                text_width = bbox[2] - bbox[0]
-                cta_x = (width - int(text_width * cta_scale)) // 2
-                cta_y = height - 250 + cta_bounce
-                
-                # Multiple outline layers for glow effect
-                for glow_size in [8, 5, 3, 0]:
-                    glow_color = 'black' if glow_size > 0 else rainbow_color
-                    
-                    for glow_x in range(-glow_size, glow_size + 1):
-                        for glow_y in range(-glow_size, glow_size + 1):
-                            if glow_x == 0 and glow_y == 0 and glow_size > 0:
-                                continue
-                            draw.text((cta_x + glow_x, cta_y + glow_y), cta, font=cta_font, fill=glow_color)
-                
-                # Simplified sparkle effects 
-                if cta_progress > 0.5:
-                    sparkle_count = 6  # Reduced from 12
-                    for i in range(sparkle_count):
-                        sparkle_angle = (t * 200 + i * 60) % 360  # Slower rotation
-                        sparkle_radius = 120  # Fixed radius
-                        sparkle_x = cta_x + text_width // 2 + int(sparkle_radius * np.cos(np.radians(sparkle_angle)))
-                        sparkle_y = cta_y + 40 + int(sparkle_radius * np.sin(np.radians(sparkle_angle)))
-                        
-                        if 0 <= sparkle_x < width and 0 <= sparkle_y < height:
-                            sparkle_size = 8  # Fixed size
-                            draw.ellipse([sparkle_x - sparkle_size, sparkle_y - sparkle_size,
-                                        sparkle_x + sparkle_size, sparkle_y + sparkle_size],
-                                       fill='yellow')
+            # Spectacular animated CTA
+            cta = "LIKE & FOLLOW FOR MORE!"
             
-            # Add corner decorations
-            corner_size = int(30 + 20 * np.sin(t * 3))
-            for corner in [(50, 50), (width-50, 50), (50, height-50), (width-50, height-50)]:
-                draw.ellipse([corner[0] - corner_size, corner[1] - corner_size,
-                            corner[0] + corner_size, corner[1] + corner_size],
-                           fill=colors[0], outline='white', width=3)
+            # Rainbow effect
+            hue = (t * 200) % 360
+            r = int(255 * (1 + np.sin(np.radians(hue))) / 2)
+            g = int(255 * (1 + np.sin(np.radians(hue + 120))) / 2)
+            b = int(255 * (1 + np.sin(np.radians(hue + 240))) / 2)
+            rainbow_color = (r, g, b)
+            
+            # Bouncing CTA
+            cta_bounce = int(30 * np.sin(t * 6))
+            cta_scale = 1 + 0.2 * np.sin(t * 8)
+            
+            bbox = draw.textbbox((0, 0), cta, font=cta_font)
+            text_width = bbox[2] - bbox[0]
+            x = max(10, (width - int(text_width * cta_scale)) // 2)
+            cta_y = height - 250 + cta_bounce
+            
+            # Simple shadow effect for CTA
+            draw.text((x + 3, cta_y + 3), cta, font=cta_font, fill='black')  # Shadow
+            draw.text((x, cta_y), cta, font=cta_font, fill=rainbow_color)    # Main text
+            
+            # Sparkles around CTA
+            sparkle_count = 8
+            for i in range(sparkle_count):
+                sparkle_angle = (t * 300 + i * 45) % 360
+                sparkle_radius = 150 + 30 * np.sin(t * 4 + i)
+                sx = x + text_width // 2 + int(sparkle_radius * np.cos(np.radians(sparkle_angle)))
+                sy = cta_y + 30 + int(sparkle_radius * np.sin(np.radians(sparkle_angle)))
+                
+                if 0 <= sx < width and 0 <= sy < height:
+                    sparkle_size = int(8 + 4 * np.sin(t * 10 + i))
+                    # 4-pointed star
+                    draw.polygon([(sx, sy-sparkle_size), (sx+sparkle_size//2, sy), 
+                                (sx, sy+sparkle_size), (sx-sparkle_size//2, sy)], 
+                               fill='yellow')
             
             return np.array(img)
         
         return mp.VideoClip(make_frame, duration=duration)
     
+    def _create_enhanced_visual(self, text: str, data: Dict, colors: tuple, duration: float) -> mp.VideoClip:
+        """Create enhanced visual with reliable animations"""
+        
+        def make_frame(t):
+            width, height = 1080, 1920
+            img = Image.new('RGB', (width, height), colors[0])
+            draw = ImageDraw.Draw(img)
+            
+            # Animated gradient background
+            for y in range(height):
+                ratio = y / height
+                wave = 0.15 * np.sin(t * 2 + y * 0.005)  # Gentler wave
+                ratio = max(0, min(1, ratio + wave))
+                r = int(colors[0][0] * (1-ratio) + colors[1][0] * ratio)
+                g = int(colors[0][1] * (1-ratio) + colors[1][1] * ratio)
+                b = int(colors[0][2] * (1-ratio) + colors[1][2] * ratio)
+                draw.line([(0, y), (width, y)], fill=(r, g, b))
+            
+            # Moving circles animation
+            circle_count = 6
+            for i in range(circle_count):
+                angle = (t * 30 + i * 60) % 360
+                radius = 250 + 50 * np.sin(t + i)
+                cx = width // 2 + int(radius * np.cos(np.radians(angle)))
+                cy = height // 2 + int(radius * np.sin(np.radians(angle)))
+                
+                if 50 <= cx <= width - 50 and 50 <= cy <= height - 50:
+                    circle_size = int(20 + 10 * np.sin(t * 3 + i))
+                    alpha = int(80 + 40 * np.sin(t * 2 + i))
+                    
+                    # Draw circles with different colors
+                    if i % 3 == 0:
+                        color = 'white'
+                    elif i % 3 == 1:
+                        color = 'yellow'
+                    else:
+                        color = 'cyan'
+                        
+                    draw.ellipse([cx-circle_size, cy-circle_size, 
+                                cx+circle_size, cy+circle_size], fill=color)
+            
+            # Floating particles
+            particle_count = 15
+            for i in range(particle_count):
+                px = int((i * 89 + t * 80) % width)
+                py = int((i * 113 + t * 60) % height)
+                particle_size = int(4 + 2 * np.sin(t * 4 + i))
+                
+                # Make sure particles are within bounds
+                if particle_size <= px <= width - particle_size and particle_size <= py <= height - particle_size:
+                    draw.ellipse([px-particle_size, py-particle_size, 
+                                px+particle_size, py+particle_size], fill='white')
+            
+            # Animated progress bars on the side
+            bar_count = 4
+            for i in range(bar_count):
+                bar_y = 200 + i * 80
+                bar_progress = (t * 0.8 + i * 0.5) % 3  # 3-second cycle
+                bar_width = int(150 * min(1, bar_progress))
+                
+                # Ensure bars are within bounds
+                bar_x = width - 200
+                if bar_x + bar_width <= width - 20:
+                    # Background bar
+                    draw.rectangle([bar_x, bar_y, bar_x + 150, bar_y + 15], fill=(40, 40, 40))
+                    # Animated bar
+                    if bar_width > 0:
+                        draw.rectangle([bar_x, bar_y, bar_x + bar_width, bar_y + 15], fill=colors[1])
+            
+            try:
+                title_font = ImageFont.truetype("arial.ttf", 55)
+                text_font = ImageFont.truetype("arial.ttf", 42)
+            except:
+                title_font = ImageFont.load_default()
+                text_font = ImageFont.load_default()
+            
+            # Animated title
+            title_bounce = int(15 * np.sin(t * 4))
+            draw.text((60, 180 + title_bounce), "KEY INSIGHT", font=title_font, fill='yellow')
+            
+            # Progressive text reveal
+            chars_per_second = 20
+            chars_revealed = int(chars_per_second * t)
+            revealed_text = text[:chars_revealed]
+            
+            # Word wrap revealed text
+            words = revealed_text.split()
+            lines = []
+            current_line = []
+            for word in words:
+                current_line.append(word)
+                if len(' '.join(current_line)) > 22:
+                    if len(current_line) > 1:
+                        lines.append(' '.join(current_line[:-1]))
+                        current_line = [word]
+                    else:
+                        lines.append(word)
+                        current_line = []
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            y_pos = 280
+            for line in lines[:4]:  # Max 4 lines
+                if line.strip():
+                    line_bounce = int(8 * np.sin(t * 3 + y_pos * 0.01))
+                    
+                    # Simple shadow
+                    draw.text((62, y_pos + line_bounce + 2), line, font=text_font, fill='black')
+                    draw.text((60, y_pos + line_bounce), line, font=text_font, fill='white')
+                    
+                y_pos += 60
+            
+            # Data visualization if available
+            if data:
+                data_y = y_pos + 80
+                data_text = f"{data['label']}: {data['value']}"
+                
+                # Ensure data text is within bounds
+                if data_y + 100 < height:
+                    # Simple shadow for data
+                    draw.text((62, data_y + 2), data_text, font=title_font, fill='black')
+                    draw.text((60, data_y), data_text, font=title_font, fill='lime')
+                    
+                    if 'change' in data:
+                        change_text = f"Change: {data['change']}"
+                        change_color = 'lime' if '+' in data['change'] else 'orange'
+                        draw.text((62, data_y + 62), change_text, font=text_font, fill='black')
+                        draw.text((60, data_y + 60), change_text, font=text_font, fill=change_color)
+            
+            return np.array(img)
+        
+        return mp.VideoClip(make_frame, duration=duration)
+        
     def _create_default_visual(self, text: str, colors: tuple, duration: float) -> mp.VideoClip:
         """Create default visual for any segment"""
-        return self._create_fact_visual(text, None, colors, duration)
+        return self._create_enhanced_visual(text, None, colors, duration)
     
     def _get_style_colors(self, style: str) -> tuple:
         """Get color scheme for style"""
